@@ -1,17 +1,60 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Head from 'next/head'
 import Image from 'next/image'
 import styles from '../styles/Home.module.css'
 
 export default function Home({ people }) {
+  const inputRef = useRef();
+  const resultsRef =  useRef();
   const [query, setQuery] = useState();
 
   const results = people.filter(({ name }) => query && name.toLowerCase().includes(query.toLowerCase()) );
   const hasResults = results && results.length > 0;
 
-  /**
-   * handleOnChange
-   */
+  function onKeyDown(event) {
+    const isUp = event.key === 'ArrowUp';
+    const isDown = event.key === 'ArrowDown';
+    const inputIsFocused = document.activeElement === inputRef.current
+
+    const resultsItems = Array.from(resultsRef.current.children);
+    const activeResultIndex = resultsItems.findIndex(child => child.querySelector('a') === document.activeElement);
+
+    if (isUp) {
+      if (inputIsFocused) {
+        resultsItems[resultsItems.length - 1].querySelector('a').focus();
+      } else if (resultsItems[activeResultIndex - 1]) {
+        resultsItems[activeResultIndex - 1].querySelector('a').focus();
+      } else {
+        inputRef.current.focus();
+      }
+    }
+
+    if (isDown) {
+      if (inputIsFocused) {
+        resultsItems[0].querySelector('a').focus();
+      } else if (resultsItems[activeResultIndex + 1]) {
+        resultsItems[activeResultIndex + 1].querySelector('a').focus();
+      } else {
+        inputRef.current.focus();
+      }
+    }
+  }
+
+  useEffect(() => {
+    inputRef.current.focus();
+  }, []);
+
+  useEffect(() => {
+    if (hasResults) {
+      document.body.addEventListener('keydown', onKeyDown);
+    } else {
+      document.body.removeEventListener('keydown', onKeyDown);
+    }
+
+    return () => {
+      document.body.removeEventListener('keydown', onKeyDown);
+    }
+  }, [hasResults]);
 
   function handleOnChange(event) {
     setQuery(event.currentTarget.value);
@@ -30,10 +73,10 @@ export default function Home({ people }) {
           SWAPI People Search
         </h1>
         <form className={styles.form} method="post" autoComplete="off">
-          <input type="search" name="query" onChange={handleOnChange} />
+          <input ref={inputRef} type="search" name="query" onChange={handleOnChange} />
           {hasResults && (
             <div className={styles.autocomplete}>
-              <ul className={styles.people}>
+              <ul ref={resultsRef} className={styles.people}>
                 {results.map(result => {
                   return (
                     <li key={result.url}>
